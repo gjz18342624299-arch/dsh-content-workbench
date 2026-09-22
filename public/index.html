@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>创作工作台</title>
+  <link rel="stylesheet" href="/api/content/app.css">
+</head>
+<body>
+  <main id="app" class="app" aria-busy="true">
+    <header class="topbar">
+      <h1 id="projectName" class="ctx">正在打开项目…</h1>
+      <span id="syncState" class="sync">同步中…</span>
+      <span class="spacer"></span>
+      <span id="bindState" class="bind" title="绑定的 DSH 会话"></span>
+      <button id="dataBtn" class="button" type="button" title="这个号整体的发布数据">📊 数据</button>
+      <button id="metaBtn" class="button" type="button" title="人设、读者、禁用词">⚙ 设置</button>
+    </header>
+
+    <div id="staleBanner" class="stale" hidden>
+      <span>DSH 改动了这个项目，但你有未保存的编辑。</span>
+      <button id="staleReload" class="button small" type="button">丢弃编辑并刷新</button>
+      <button id="staleDismiss" class="button small subtle" type="button">先不管</button>
+    </div>
+
+    <div class="workspace">
+      <aside class="rail">
+        <div id="personaBox" class="persona"></div>
+        <div class="rail-head">
+          <span>选题</span>
+          <b id="topicCount">0</b>
+          <button id="newTopic" class="button small primary" type="button">＋ 选题</button>
+        </div>
+        <div class="rail-filters" id="topicFilters">
+          <button class="chip active" data-filter="all" type="button">全部</button>
+          <button class="chip" data-filter="candidate" type="button">候选</button>
+          <button class="chip" data-filter="writing" type="button">写作中</button>
+          <button class="chip" data-filter="done" type="button">已完成</button>
+        </div>
+        <div id="topicList" class="topic-list"></div>
+      </aside>
+
+      <section class="stage">
+        <nav class="stage-nav">
+          <button class="tab active" data-view="topic" type="button">选题详情</button>
+          <button class="tab" data-view="drafts" type="button">稿件 <span id="draftCount">0</span></button>
+          <button class="tab" data-view="materials" type="button">素材 <span id="materialCount">0</span></button>
+          <button class="tab" data-view="log" type="button">记录</button>
+        </nav>
+        <div id="topicView" class="view"></div>
+        <div id="draftsView" class="view" hidden></div>
+        <div id="materialsView" class="view" hidden></div>
+        <div id="dataView" class="view" hidden></div>
+        <div id="logView" class="view" hidden></div>
+      </section>
+
+      <aside id="inspector" class="inspector"></aside>
+    </div>
+  </main>
+
+  <div id="modal" class="modal" hidden>
+    <form id="modalForm" class="modal-card">
+      <h2 id="modalTitle"></h2>
+      <div id="modalBody" class="modal-body"></div>
+      <div class="modal-actions">
+        <button type="button" id="modalCancel" class="button subtle">取消</button>
+        <button type="submit" class="button primary" id="modalOk">确定</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <div id="lightbox" class="lightbox" hidden><img id="lightboxImg" alt="配图预览"></div>
+
+  <script type="module" src="/api/content/app.js"></script>
+</body>
+</html>

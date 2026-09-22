@@ -1,0 +1,64 @@
+{
+  "name": "dsh-content-workbench",
+  "version": "0.1.0",
+  "description": "自媒体内容创作工作台 —— DSH (DeepSeek Harness) 插件：左侧固定选题/方向/平台，右侧与 DSH 对话提要求，结合素材库自动产出公众号图文、小红书笔记、短视频脚本等图文并茂的内容。",
+  "keywords": [
+    "deepseek",
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "workbench",
+    "content-creation",
+    "wechat",
+    "xiaohongshu",
+    "自媒体",
+    "内容创作",
+    "工作台"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gjz18342624299-arch/dsh-content-workbench.git"
+  },
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "lib",
+    "public",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node --check src/index.js && node --check lib/client.js && node --check public/app.js && node --test --test-isolation=none",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "dsh-desktop-workbenches",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-api-session-controller"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-host-webserver": "*"
+  }
+}

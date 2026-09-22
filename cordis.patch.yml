@@ -1,0 +1,8 @@
+# dsh-content-workbench bundle patch.
+#
+# Good-citizen plugin: contributes one entry to the `sidebar.footer.action`
+# list slot and one to `shell.overlay`, both via `slots.inject`, so it composes
+# with whatever owns the sidebar and needs no `ui-sidebar` disable.
+- insert:
+    - id: content-workbench
+      name: dsh-content-workbench
