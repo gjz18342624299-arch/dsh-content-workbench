@@ -1,8 +1,8 @@
 # dsh-content-workbench bundle patch.
 #
-# Good-citizen plugin: contributes one entry to the `sidebar.footer.action`
-# list slot and one to `shell.overlay`, both via `slots.inject`, so it composes
-# with whatever owns the sidebar and needs no `ui-sidebar` disable.
+# 标准工作台形态：只把服务端入口插进 Harness 插件树。业务面板由客户端通过
+# desktopWorkbenches.register() 注册，宿主负责侧边栏入口、模式切换、会话归属
+# 和最近会话恢复，这里不需要也不应覆盖任何已有插件条目。
 - insert:
-    - id: content-workbench
-      name: dsh-content-workbench
+    - id: content-workbench        # 插件条目 id（仅用于在插件树里定位这一行）
+      name: dsh-content-workbench  # 必须写 npm 包名，Node 才能解析到安装的代码

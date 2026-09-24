@@ -1,11 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import {
   slugify, migrate, normalizeTopic, normalizeDraft,
-  applyAction, exportDraft, ensureProject,
+  applyAction, exportDraft, ensureProject, createProject, relinkProject, removeProject,
   FORMATS, TOPIC_STATUSES, DRAFT_STATUSES,
 } from '../src/index.js'
 
@@ -118,16 +118,117 @@ test('exportDraft 产出带元信息的 markdown', async () => {
   assert.match(content, /正文内容/)
 })
 
-test('ensureProject 建出目录结构与 CONTEXT.md', async () => {
+// ── 登记簿与用户确认的文件夹（工作台开发规范第 6 节）─────────────────
+// registryDir() 惰性读取环境变量，每个用例用自己的临时目录即可。
+
+test('createProject 必须由用户明确挑选文件夹', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cw-'))
   process.env.DSH_CONTENT_WORKBENCH_ROOT = dir
   try {
-    const { ensureProject: scoped } = await import(`../src/index.js?${Date.now()}`)
-    const { folder, state } = await scoped('demo', { name: '演示' })
+    await assert.rejects(() => createProject({ name: 'x' }), /项目文件夹/)
+    await assert.rejects(() => createProject({ name: 'x', folder: 'relative/path' }), /项目文件夹/)
+  } finally {
+    delete process.env.DSH_CONTENT_WORKBENCH_ROOT
+  }
+})
+
+test('createProject 在用户挑选的文件夹里建结构，ensureProject 读出', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cw-'))
+  const folder = join(dir, '演示项目')
+  process.env.DSH_CONTENT_WORKBENCH_ROOT = dir
+  try {
+    const { summary, adopted } = await createProject({ name: '演示号', folder })
+    assert.equal(adopted, false)
+    assert.ok(summary.id)
+    const loaded = await ensureProject(summary.id)
+    assert.equal(loaded.folder, resolve(folder))
+    assert.equal(loaded.state.project.name, '演示号')
     const context = await readFile(join(folder, 'CONTEXT.md'), 'utf8')
     assert.match(context, /内容创作工作台上下文/)
     assert.match(context, /公众号图文/)
-    assert.equal(state.project.id, 'demo')
+  } finally {
+    delete process.env.DSH_CONTENT_WORKBENCH_ROOT
+  }
+})
+
+test('createProject 认领已有 project.json 的文件夹，不另建项目', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cw-'))
+  const folder = join(dir, 'proj')
+  process.env.DSH_CONTENT_WORKBENCH_ROOT = dir
+  try {
+    const first = await createProject({ name: '认领我', folder })
+    const again = await createProject({ name: '换个名字', folder })
+    assert.equal(again.adopted, true)
+    assert.equal(again.summary.id, first.summary.id)
+  } finally {
+    delete process.env.DSH_CONTENT_WORKBENCH_ROOT
+  }
+})
+
+test('removeProject 只撤销登记，文件原样保留', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cw-'))
+  const folder = join(dir, 'proj')
+  process.env.DSH_CONTENT_WORKBENCH_ROOT = dir
+  try {
+    const { summary } = await createProject({ name: '别删我文件', folder })
+    const { kept } = await removeProject(summary.id)
+    assert.equal(kept, resolve(folder))
+    const raw = JSON.parse(await readFile(join(folder, 'project.json'), 'utf8'))
+    assert.equal(raw.project.name, '别删我文件')
+    await assert.rejects(() => ensureProject(summary.id), /项目不存在/)
+  } finally {
+    delete process.env.DSH_CONTENT_WORKBENCH_ROOT
+  }
+})
+
+test('ensureProject 对丢失的文件夹报 PROJECT_FOLDER_MISSING，不自动重建', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cw-'))
+  process.env.DSH_CONTENT_WORKBENCH_ROOT = dir
+  try {
+    const { summary } = await createProject({ name: '要丢的', folder: join(dir, 'real') })
+    // 模拟文件夹被移走：直接把登记指向一个不存在的位置。
+    const registryFile = join(dir, 'projects.json')
+    const registry = JSON.parse(await readFile(registryFile, 'utf8'))
+    registry.projects[0].folder = join(dir, 'not-there')
+    await writeFile(registryFile, JSON.stringify(registry), 'utf8')
+    const error = await ensureProject(summary.id).catch(e => e)
+    assert.equal(error.code, 'PROJECT_FOLDER_MISSING')
+    const { stat } = await import('node:fs/promises')
+    assert.equal(await stat(join(dir, 'not-there')).catch(() => null), null) // 没有被自动重建
+  } finally {
+    delete process.env.DSH_CONTENT_WORKBENCH_ROOT
+  }
+})
+
+test('relinkProject 把项目指向用户重新选择的位置', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cw-'))
+  process.env.DSH_CONTENT_WORKBENCH_ROOT = dir
+  try {
+    const { summary } = await createProject({ name: '搬家的', folder: join(dir, 'old') })
+    const moved = await relinkProject({ project: summary.id, folder: join(dir, 'new-place') })
+    assert.equal(moved.summary.folder, resolve(join(dir, 'new-place')))
+    const loaded = await ensureProject(summary.id)
+    assert.equal(loaded.state.project.name, '搬家的')
+    await assert.rejects(() => relinkProject({ project: summary.id, folder: 'nope' }), /项目文件夹/)
+  } finally {
+    delete process.env.DSH_CONTENT_WORKBENCH_ROOT
+  }
+})
+
+test('旧版默认目录里的既有项目会被回收到登记簿', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cw-'))
+  process.env.DSH_CONTENT_WORKBENCH_ROOT = dir
+  try {
+    // 手工摆一个旧版（≤0.1）布局：数据目录下直接是项目文件夹，没有 projects.json。
+    const legacy = join(dir, 'legacy-proj')
+    await mkdir(legacy, { recursive: true })
+    await writeFile(join(legacy, 'project.json'), JSON.stringify({ project: { id: 'legacy-proj', name: '旧项目' } }), 'utf8')
+    const { state } = await ensureProject('legacy-proj')
+    assert.equal(state.project.name, '旧项目')
+    assert.equal(state.project.folder, legacy)
+    // 回收后登记簿落盘，下次直接读登记簿。
+    const registry = JSON.parse(await readFile(join(dir, 'projects.json'), 'utf8'))
+    assert.equal(registry.projects[0].id, 'legacy-proj')
   } finally {
     delete process.env.DSH_CONTENT_WORKBENCH_ROOT
   }

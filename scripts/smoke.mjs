@@ -5,6 +5,8 @@ import { join } from 'node:path'
 import http from 'node:http'
 
 process.env.DSH_CONTENT_WORKBENCH_ROOT = await mkdtemp(join(tmpdir(), 'cw-smoke-'))
+// 项目文件夹模拟「用户在宿主目录选择器里挑的位置」，与登记簿目录分开。
+const projectFolder = await mkdtemp(join(tmpdir(), 'cw-smoke-project-'))
 const { handleApi } = await import(`../src/index.js?smoke=${Date.now()}`)
 
 const server = http.createServer((req, res) => handleApi(req, res).catch(e => {
@@ -34,8 +36,10 @@ check('GET /app.css 返回 CSS', css.status === 200 && css.type.includes('text/c
 const js = await api('/api/content/app.js')
 check('GET /app.js 返回 JS', js.status === 200 && js.body.includes('bootstrap'))
 
-// 建项目
-const created = await post('/api/content/projects', { name: '冒烟测试号' })
+// 建项目：必须带用户选择的文件夹（新规范不允许静默建目录）
+const noFolder = await post('/api/content/projects', { name: '没位置的' })
+check('POST /projects 缺 folder 返回 400', noFolder.status === 400)
+const created = await post('/api/content/projects', { name: '冒烟测试号', folder: projectFolder })
 check('POST /projects 创建项目', created.status === 201 && created.body.project.id)
 const slug = created.body.project.id
 console.log('  project slug =', slug)
@@ -106,6 +110,14 @@ const bind = await post('/api/content/action', { project: slug, type: 'bind-sess
 check('bind-session 持久化', bind.body.state.project.sessionId === 'sess-smoke-1')
 const relist = await api('/api/content/projects')
 check('项目列表带回 sessionId', relist.body.projects.find(p => p.id === slug)?.sessionId === 'sess-smoke-1')
+
+// 移除项目：只撤销登记，文件保留
+const del = await post('/api/content/projects/delete', { project: slug })
+check('projects/delete 成功且返回保留位置', del.status === 200 && del.body.kept === projectFolder)
+const kept = await api(`/api/content/file?project=${slug}&path=${encodeURIComponent('project.json')}`)
+check('移除后接口不再认这个项目', kept.status === 404)
+const { stat } = await import('node:fs/promises')
+check('移除后 project.json 仍在磁盘上', !!(await stat(join(projectFolder, 'project.json')).catch(() => null)))
 
 server.close()
 console.log(failures ? `\n${failures} 项失败` : '\n全部通过')
