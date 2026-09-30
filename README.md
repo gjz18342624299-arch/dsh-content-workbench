@@ -59,6 +59,30 @@ npm run check     # 语法检查 + 单测
 npm run smoke     # HTTP 冒烟（真实打一遍 API）
 ```
 
+## 安装包发布（Release）
+
+发布流程可复现，全部命令在本仓库根目录执行（需要 Node ≥ 20）：
+
+```bash
+npm run check        # 语法检查 + 单元测试
+npm run smoke        # HTTP 冒烟测试
+npm run pack:check   # 完整发布门禁：先跑完以上测试，再校验安装契约（入口 / bundle patch / inject / exports），
+                     # 然后 npm pack 并校验包内容、私有文件与体积（≤ 8 MiB），
+                     # 产出 ../dist/dsh-content-workbench-<version>.tgz 并输出 SHA-256
+```
+
+`npm run pack:check` 通过后，在**对应版本的主分支提交**上创建正式 GitHub Release（不勾选 draft / prerelease），并把 tgz 以**固定附件名 `dsh-content-workbench.tgz`**（不带版本号）上传。每次 Release 使用同一附件文件名，市场通过固定地址统计安装包下载次数：
+
+- 固定下载地址：`https://github.com/gjz18342624299-arch/dsh-content-workbench/releases/latest/download/dsh-content-workbench.tgz`
+
+用 GitHub CLI 的等价发布命令（网页操作等价；`#` 后是重命名后的附件名）：
+
+```bash
+gh release create v<version> ../dist/dsh-content-workbench-<version>.tgz#dsh-content-workbench.tgz --title <version> --latest
+```
+
+下载统计来自 GitHub Release 附件的真实下载数，不要手工填写或伪造。
+
 ## 许可
 
 MIT

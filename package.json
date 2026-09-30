@@ -42,7 +42,8 @@
   },
   "scripts": {
     "check": "node --check src/index.js && node --check lib/client.js && node --check public/app.js && node --test --test-isolation=none",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "pack:check": "node scripts/verify-package.mjs"
   },
   "dsh": {
     "bundle": {
