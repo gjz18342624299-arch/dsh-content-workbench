@@ -240,8 +240,10 @@ textarea.body { min-height: 340px; font-family: ui-monospace, "SF Mono", Consola
 }
 .toast[data-show="true"] { opacity: 1; transform: translate(-50%, 0); }
 
-/* 窄面板（用户把面板拖窄时）收起右栏 */
-@container (max-width: 900px) { .workspace { grid-template-columns: 220px minmax(0, 1fr); } .inspector { display: none; } }
+/* 窄面板（面板旁边开着 AI 对话时常见）：右栏「交给 DSH」是核心入口，不能藏。
+   900px 以下：左栏收窄、右栏收窄但保留；640px 以下才整列隐藏。 */
+@container (max-width: 900px) { .workspace { grid-template-columns: 200px minmax(0, 1fr) 190px; } .inspector { padding: 10px 8px; } }
+@container (max-width: 640px) { .workspace { grid-template-columns: 180px minmax(0, 1fr); } .inspector { display: none; } }
 
 /* ── 发布数据回填 ── */
 .publish-box { border-top: 1px dashed var(--line); padding-top: 14px; margin-top: 14px; }
