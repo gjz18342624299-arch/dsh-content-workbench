@@ -1,6 +1,6 @@
 {
   "name": "dsh-content-workbench",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "自媒体内容创作工作台 —— DSH (DeepSeek Harness) 插件：左侧固定选题/方向/平台，右侧与 DSH 对话提要求，结合素材库自动产出公众号图文、小红书笔记、短视频脚本等图文并茂的内容。",
   "keywords": [
     "deepseek",
